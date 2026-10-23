@@ -146,3 +146,21 @@ See [DECISIONS.md](DECISIONS.md) for processing choices, failure handling, scali
 ## AI usage
 
 AI assistance was used to help scaffold the project, explain Django and Celery, and troubleshoot development issues. The implementation was tested and adjusted during development.
+
+## Background Processing
+
+The application uses Celery for asynchronous URL checking and Redis as its message broker.
+
+Django creates a batch and its URL check records in PostgreSQL.
+
+After the database transaction commits, Django queues one Celery task per URL check using check_url.delay(check_id).
+
+Redis holds the pending task messages.
+
+A Celery worker consumes each task, retrieves the URL check record from PostgreSQL, and sends an HTTP request.
+
+The worker saves the HTTP status code, response time, final URL, error details, and check timestamp to PostgreSQL.
+
+Celery Beat schedules retry_failed_urls to run hourly and enqueue previously failed checks that are due for another attempt.
+
+PostgreSQL stores the application records and check results. Redis handles task messaging and is also configured as the Celery result backend.

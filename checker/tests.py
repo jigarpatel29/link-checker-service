@@ -16,7 +16,7 @@ class BatchAPITests(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
                 "/batches/",
-                {"urls": ["https://example.com", "https://example.org"]},
+                {"urls": ["https://algiftcards.com", "https://www.ticketstodo.com"]},
                 format="json",
             )
 
@@ -99,9 +99,16 @@ class URLTaskTests(TestCase):
         )
         mock_get.side_effect = requests.Timeout("Timed out")
 
-        check_url.run(item.id)
+        # Simulate the final attempt after two retries.
+        check_url.apply(
+            args=[item.id],
+            retries=2,
+            throw=True,
+        )
 
         item.refresh_from_db()
+
         self.assertIsNone(item.status_code)
         self.assertTrue(item.last_check_failed)
-        self.assertIsNotNone(item.error)
+        self.assertEqual(item.error, "Timed out")
+        self.assertIsNotNone(item.checked_at)

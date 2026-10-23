@@ -38,6 +38,12 @@ def check_url(self, url_check_id):
         item.last_check_failed = response.status_code >= 400
 
     except requests.RequestException as exc:
+        if self.request.retries < self.max_retries:
+            raise self.retry(
+                exc=exc,
+                countdown=self.default_retry_delay,
+            )
+
         item.status_code = None
         item.response_time_ms = round(
             (time.monotonic() - started) * 1000
